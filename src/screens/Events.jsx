@@ -1,12 +1,35 @@
-import React from 'react';
-import { StyleSheet, Text, View } from "react-native";
+import * as React from 'react';
+import { StyleSheet, Text, View, SafeAreaView } from "react-native";
+import { Provider, useDispatch, useSelector } from "react-redux";
+
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import PastEvents from '../components/PastEvents';
+import NextEvents from '../components/NextEvents';
 
 
-const Events = () => {
+const Tab = createMaterialTopTabNavigator();
+
+const Events = ({navigation}) => {
+
+  const { me } = useSelector((store) => store.user);
+
     return (
-        <View style={styles.container}>
-            <Text>Events Screen</Text>
-        </View>
+      
+          <Tab.Navigator 
+              tabBarOptions={{
+              labelStyle: { fontSize: 14, fontFamily: "Poppins_500Medium", color: "#23036A", },
+              style: { backgroundColor: '#fff' },
+              activeTintColor:"#D4B5FA",
+              inactiveTintColor:'#fff',
+              indicatorStyle:{backgroundColor:"#985EFF"}
+              }}
+              
+          >
+            <Tab.Screen name="Proximos" component={NextEvents} navigation={navigation}/>
+            <Tab.Screen name="Anteriores" component={PastEvents} navigation={navigation}/>
+            
+          </Tab.Navigator>
+        
     )
 }
 
@@ -14,9 +37,12 @@ export default Events;
 
 const styles = StyleSheet.create({
     container: {
-      flex: 1,
       backgroundColor: "#fff",
       alignItems: "center",
-      justifyContent: "center",
+      justifyContent: "flex-start",
+      width:'100%',
+      height:'100%',
     },
   });
+
+  

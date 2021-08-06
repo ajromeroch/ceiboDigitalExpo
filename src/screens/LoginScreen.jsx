@@ -1,53 +1,61 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView } from "react-native";
-import Svg, { Rect } from 'react-native-svg';
-import LoginForm from '../components/LoginForm';
+import React from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  SafeAreaView,
+} from "react-native";
+import Svg, { Rect } from "react-native-svg";
+import { useSelector } from "react-redux";
+import LoginForm from "../components/LoginForm";
+import MyAccountLoggedIn from "./MyAccountLoggedIn";
+
+const LoginScreen = ({ navigation }) => {
+  const { me } = useSelector((store) => store.user);
+  return (
+    <SafeAreaView>
+      {me && me.id ? (
+        <MyAccountLoggedIn navigation={navigation}/>
+      ) : (
+        <View style={styles.container}>
 
 
-const LoginScreen = () => {
-    return (
-      <SafeAreaView>
-      <ScrollView>
+          <Svg height={170} width="100%">
+            <Rect x="0" y="0" width="100%" height={170} fill="#23036A" />
+          </Svg>
 
-      <View style={styles.container}>
+          <View style={styles.textContainer}>
+            <Text style={styles.textTitle}>Nos alegra verte de nuevo!</Text>
+          </View>
 
-        <Svg height="100%" width="100%" style={{position: 'absolute'}}>
-            <Rect x="0" y="0" width="100%" height="30%" fill="#23036A" />
-        </Svg>
+          <View style={{marginTop:25,}}>
+            <LoginForm navigation={navigation} />
+          </View>
 
-        <View style={styles.textContainer}>
-          <Text style={styles.textTitle}>Iniciá sesión</Text>
         </View>
-
-        <View>
-        <LoginForm />
-        </View>
-
-      </View>
-      </ScrollView>
-      </SafeAreaView>
-    )
-}
+      )}
+    </SafeAreaView>
+  );
+};
 
 export default LoginScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "flex-start",
-    height:'100%',
     width:'100%',
-    paddingBottom:100,
+    height:'100%',
   },
   textContainer: {
     position:'absolute',
-    transform:([{translateY:60}]),
+    transform:([{translateY:70}]),
   },
   textTitle: {
-    fontFamily: 'Poppins_300Light',
+    fontFamily: "Poppins_300Light",
     fontSize: 18,
-    color: '#fff',
+    color: "#fff",
   },
 });

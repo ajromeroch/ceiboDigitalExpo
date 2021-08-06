@@ -1,63 +1,47 @@
-const { User } = require("../models/");
+const { User, Plan, Category } = require("../models/");
 const jwt = require("jsonwebtoken");
 
 const accessTokenSecret = "ceiboDigital";
 
+//trae todos los contactos del usuario deseado
 const getUser = (req, res, next) => {
   User.find({})
     .populate("contacts", { name: 1, lastName: 1, age: 1, img: 1, email: 1 })
+    .sort({ name: "asc" })
     .then((users) => {
       res.json(users);
     });
 };
 
-const addFriend = (req, res, next) => {
-  //tengo la info del usuario loggeado. Como llega desde el front?
-  const loggedUser = {
-    contacts: [],
-    myPlans: [],
-    categories: [],
-    name: "marti",
-    lastName: "rebo",
-    age: 19,
-    img: "vnjgvo",
-    email: "mar@mar.com",
-    password: "$2b$16$N.pGRb2hb3yh0DgrV4PBL.jYUTNDgQXvK5JyEfASjayaTmuUhvcUO",
-    salt: "$2b$16$N.pGRb2hb3yh0DgrV4PBL.",
-    id: "60f5c3a7e0cd0625e37f5382",
-  }; //ver de donde sacar el logged user
+const addPlan = (req, res, next) => {
+  const { id } = req.user;
+  const planId = req.body.id;
+  const userPromise = User.findById(id);
+  const planPromise = Plan.findById(planId);
 
-  // que informacion nos llega desde el front al momento de
-  // no se que nos va a pasar el apretar boton
-  const userFriend = {
-    contacts: [],
-    myPlans: [],
-    categories: [],
-    name: "alejandro",
-    lastName: "ro",
-    age: 31,
-    img: "lala",
-    email: "lala@lala.com",
-    password: "$2b$16$6FRF5AeFJ2PesLiBbmt2leTnOnTIQXFPv2.YdxNYU0VwJUGbEnBFW",
-    salt: "$2b$16$6FRF5AeFJ2PesLiBbmt2le",
-    id: "60f5c383e0cd0625e37f5380",
-  };
-
-  User.findById(loggedUser.id)
-    .then((user) => {
-      if (!user.contacts.includes(userFriend.id)) {
-        user.contacts = user.contacts.concat(userFriend.id);
-        user.save();
-      }
-      return user;
+  Promise.all([userPromise, planPromise])
+    .then((values) => {
+      const [user, plan] = values;
+      user.myPlans = user.myPlans.concat(plan);
+      plan.users = plan.users.concat(user);
+      user.save();
+      plan.save();
+      res.status(200).send(user.myPlans);
     })
-    .then((user) => res.status(201).send(user))
-    .catch((err) => console.log(err));
+    .catch((err) => {
+      next(err);
+    });
 };
 
 const getOneUser = (req, res, next) => {
   const { id } = req.params;
   User.findById(id)
+    .populate("plan", {
+      name: 1,
+      price: 1,
+      capacity: 1,
+      address: 1,
+    })
     .then((user) => {
       if (user.name) {
         return res.json(user);
@@ -111,6 +95,7 @@ const loginUser = async (req, res, next) => {
     return res.status(400).json({ msg: "Usuario no encontrado" });
   }
   const validate = await user.isValidPassword(password);
+  console.log("Validate -> ", validate);
 
   if (!validate) {
     return res.status(401).json({ msg: "Password invalido" });
@@ -121,6 +106,43 @@ const loginUser = async (req, res, next) => {
   return res.status(200).json({ token });
 };
 
+const getMe = (req, res, next) => {
+  const { id } = req.user;
+
+  User.findById(id)
+    .populate("myPlans", {
+      name: 1,
+      creationDate: 1,
+      planDate: 1,
+      address: 1,
+      price: 1,
+      img: 1,
+      planOwner: 1,
+    })
+
+    .populate("categories", {
+      type: 1,
+      id: 1,
+    })
+
+    .populate("contacts", {
+      name: 1,
+      lastName: 1,
+      email: 1,
+    })
+
+    .then((user) => {
+      console.log("user->", user);
+      if (user.name) {
+        return res.json(user);
+      } else {
+        res.status(404);
+      }
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
 // router.post("/login", async (req, res, next) => {
 //   const { email, password } = req.body;
 
@@ -141,15 +163,174 @@ const loginUser = async (req, res, next) => {
 //   return res.status(200).json({ token });
 // });
 
-const logoutUser = (req, res, next) => {};
+const logoutUser = (req, res, next) => {
+  const user = req.user;
+  console.log("ESTAMOS EN LA RUTA DE LOGOUT", user);
+  user = null;
+  res.status(200).json({});
+};
+
+const removePlan = (req, res, next) => {
+  console.log("LLEGUE A LA RUTAAASA !!!!! ");
+  const { id } = req.user;
+  const idPlan = req.params.id;
+
+  const userPromise = User.findById(id);
+  const planPromise = Plan.findById(idPlan);
+
+  Promise.all([userPromise, planPromise])
+    .then((values) => {
+      const [user, plan] = values;
+      console.log("Antes Plan", plan.users);
+      console.log("Antes user", user.myPlans);
+      user.myPlans = user.myPlans.filter((planId) => planId != idPlan);
+      plan.users = plan.users.filter((user) => user != id);
+      user.save();
+      plan.save();
+
+      console.log("Despues Plan", plan.users);
+      console.log("Despues user", user.myPlans);
+      res.status(200).send("plan eliminado");
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
+
+const getAllFriends = (req, res, next) => {
+  const { id } = req.user;
+  console.log("este es el id de getAllFriend", id);
+  User.findById(id)
+    .populate("contacts", { name: 1, lastName: 1, age: 1, img: 1, email: 1 })
+    .then((result) => {
+      console.log("este es el res.data de getAllFriends", result);
+      return res.status(200).send(result);
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
+
+const getContactsByQuery = (req, res, next) => {
+  // OJO para que coincida con el key que viene desde el front
+  console.log("esto es lo que llega desde el query", req.query.name);
+  const { name } = req.query;
+  const queryFiltered = {
+    $or: [
+      { name: { $regex: name, $options: "i" } },
+      { lastName: { $regex: name, $options: "i" } },
+    ],
+  };
+
+  User.find(queryFiltered)
+    .sort({ name: "asc" })
+    .then((search) => {
+      if (!search) res.status(404);
+      res.status(200).json(search);
+    })
+    .catch((err) => res.status(400).send(err));
+};
+
+const addFriend = (req, res, next) => {
+  const { id } = req.user;
+  const friendId = req.body.id;
+  const userPromise = User.findById(id);
+  const friendPromise = User.findById(friendId);
+  console.log("este es el friendId", friendId);
+  console.log("este es el id", id);
+  console.log("este es el boyd", req.body);
+  Promise.all([userPromise, friendPromise])
+    .then((values) => {
+      const [user, friend] = values;
+      console.log("este es el friend", friend);
+      user.contacts = user.contacts.concat(friend);
+      user.save();
+      res.status(201).send(friend);
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
+
+const removeFriend = (req, res, next) => {
+  const { id } = req.user;
+  const idFriend = req.body.id;
+
+  const userPromise = User.findById(id);
+  const friendPromise = User.findById(idFriend);
+
+  Promise.all([userPromise, friendPromise])
+    .then((values) => {
+      const [user, friend] = values;
+      console.log("aca llego el friend ");
+      user.contacts = user.contacts.filter((friendId) => friendId != idFriend);
+      user.save();
+      res.status(200).send(user.contacts);
+      console.log("user", user);
+      console.log("friend", friend);
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
+
+const addCategory = (req, res, next) => {
+  const { id } = req.user;
+  const categoryId = req.body.id;
+  const userPromise = User.findById(id);
+  const categoryPromise = Category.findById(categoryId);
+  console.log("ESTO ES CATEGORY ID EN EL BACK----->", categoryId);
+  console.log("ESTO ES REQ.BODY EN EL BACK----->", req.body);
+
+  Promise.all([userPromise, categoryPromise])
+    .then((values) => {
+      const [user, category] = values;
+      user.categories = user.categories.concat(category);
+      user.save();
+      res.status(200).send("categoria agregada");
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
+
+const removeCategory = (req, res, next) => {
+  const { id } = req.user;
+  const categoryId = req.body.id;
+  const userPromise = User.findById(id);
+  const categoryPromise = Category.findById(categoryId);
+  console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA---->", id);
+
+  Promise.all([userPromise, categoryPromise])
+    .then((values) => {
+      const [user, category] = values;
+      console.log("user y category", user, category);
+      user.categories = user.categories.filter(
+        (category) => category != categoryId
+      );
+      user.save();
+      res.status(200).send("categoria eliminada");
+    })
+    .catch((err) => {
+      next(err);
+    });
+};
 
 module.exports = {
   getUser,
   getOneUser,
-  addFriend,
   postUser,
   updateUser,
   deleteUser,
   loginUser,
   logoutUser,
+  getMe,
+  addPlan,
+  removePlan,
+  getAllFriends,
+  getContactsByQuery,
+  addFriend,
+  removeFriend,
+  addCategory,
+  removeCategory,
 };

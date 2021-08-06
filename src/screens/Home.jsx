@@ -6,25 +6,21 @@ import { StyleSheet, Text, View, ScrollView, SafeAreaView } from "react-native";
 import EventCard from "../components/EventCard";
 import MyEventCard from "../components/MyEventCard";
 
-import { useDispatch } from "react-redux";
-import { showCategories } from "../state/categories";
 
 const Home = ({ navigation }) => {
   return (
     <SafeAreaView>
       <ScrollView>
         <View style={styles.container}>
-
-          <Text style={styles.textSubtitle}>Eventos promocionados</Text>
-
           <View style={styles.container}>
             <EventCard navigation={navigation} />
           </View>
 
-          <Text style={styles.textSubtitle}>Tus próximos eventos</Text>
+          <Text style={styles.textSubtitle}>Tus eventos</Text>
+          <View style={{marginRight:20, marginBottom:20}}>
 
           <MyEventCard />
-          
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -40,20 +36,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
   },
-  textTitle: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 20,
-    letterSpacing: 2,
-    textAlign: "center",
-    textTransform: "uppercase",
-    color: "#23036A",
-    paddingTop: 30,
-  },
   textSubtitle: {
     fontFamily: "Poppins_500Medium",
     fontSize: 18,
     textAlign: "center",
     color: "#23036A",
-    paddingTop: 10,
   },
 });
